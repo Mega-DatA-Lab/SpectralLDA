@@ -38,16 +38,17 @@ def mult_E2_X(docs, X, n_docs):
 
     return (t1 - t2) / n_docs
 
-def mult_M2_X(docs, X, n_docs, alpha0, M1):
+def mult_M2_X_helper(prod_E2_X, X, M1, alpha0):
     ''' Compute the product of M2 by X
 
 
     '''
-    # TODO Reduce to get the product of E[x1\dot x2] and X
-    # prod_E2_X
-
     prod_M1_X = alpha0 / (alpha0 + 1) * M1.outer(M1.dot(X)) 
     return prod_E2_X - prod_M1_X
+
+def mult_M2_X(docs, X, n_docs, M1, alpha0):
+    prod_E2_X = mult_E2_X(docs, X, n_docs)
+    return mult_M2_X_helper(prod_E2_X, X, M1, alpha0)
 
 def whiten_E3(docs, W, n_docs):
     m, _ = docs.shape
@@ -124,9 +125,9 @@ def whiten_E2_M1(docs, W, n_docs, M1):
     u2 = u21.sum(axis=0) + u22.sum(axis=0) + u23.sum(axis=0)
     
     whitened_E2_M1 = (u1 - u2) / n_docs
-    return whitened_E2_M1
-    
-def whiten_M3(docs, W, n_docs, M1, alpha0):
+    return whitened_E2_M1    
+
+def whiten_M3_helper(whitened_E3, whitened_E2_M1, W, M1, alpha0):
     ''' Whiten M3
 
     '''
@@ -135,10 +136,6 @@ def whiten_M3(docs, W, n_docs, M1, alpha0):
     outer_q_q = np.einsum('ij,ik->ijk', q, q).reshape(m, -1)
     whitened_M1_3 = np.einsum('ij,ik->ijk', q, outer_q_q).reshape(m, -1)
     
-    # TODO Reduce whitened E3
-
-    # TODO Reduce whitened E2 M1
-
     whitened_M3 = (
         whitened_E3
         - alpha0 / (alpha0 + 2) * whitened_E2_M1
@@ -146,4 +143,10 @@ def whiten_M3(docs, W, n_docs, M1, alpha0):
     )
 
     return whitened_M3
+
+def whiten_M3(docs, W, n_docs, M1, alpha0):
+    whitened_E3 = whiten_E3(docs, W, n_docs)
+    whitened_E2_M1 = whiten_E2_M1(docs, W, n_docs, M1)
+    return whiten_M3_helper(whitened_E3, whitened_E2_M1,
+                            W, M1, alpha0)
 
