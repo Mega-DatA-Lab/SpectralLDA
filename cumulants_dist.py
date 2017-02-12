@@ -12,6 +12,36 @@ def docs_range(n_docs):
     return range(worker_id * range_size, 
                  min((worker_id + 1) * range_size, n_docs))
 
+def compute_M1_dist(docs_file, params_file):
+    kvstore = mx.kvstore.create('dist_sync')
+    
+    docs_file_data = np.load(docs_file)
+    params_file_data = np.load(params_file)
+
+    docs = docs_file_data['docs']
+    vocab_size = docs_file_data['vocab_size']
+    n_docs = len(docs)
+
+    alpha0 = params_file_data['alpha0']
+    k = params_file_data['k']
+
+    result_key = 90 
+    if 'DMLC_WORKER_ID' in os.environ:
+        result = mx.nd.zeros((vocab_size,))
+        kvstore.init(result_key, result)
+        
+        m1 = docs[docs_range(n_docs), :].mean(axis=0)
+        kvstore.push(result_key, m1)
+        
+        kvstore.pull(result_key, out=result)
+    
+        np.savez(params_file, 
+                 M1=result.asnumpy(),
+                 alpha0=alpha0,
+                 k=k)
+
+    kvstore.close()
+
 def mult_M2_X_dist(docs_file, params_file):
     kvstore = mx.kvstore.create('dist_sync')
     
@@ -48,7 +78,7 @@ def mult_M2_X_dist(docs_file, params_file):
     kvstore.close()
 
 
-def whiten_M3_dist(docs_file, params_file, output_path):
+def whiten_M3_dist(docs_file, params_file):
     kvstore = mx.kvstore.create('dist_sync')
     
     docs_file_data = np.load(docs_file)
@@ -96,7 +126,7 @@ if __name__ = '__main__':
     parser = argparse.ArgumentParser()
    
     parser.add_argument('cmd', 
-                        choices=['mult_M2_X', 'whiten_M3'],
+                        choices=['compute_M1', 'mult_M2_X', 'whiten_M3'],
                         help='command')
     parser.add_argument('--data-path',
                         default='/tmp/speclda/',
@@ -112,11 +142,12 @@ if __name__ = '__main__':
     docs_file = os.path.join(args.data_path, args.docs)
     params_file = os.path.join(args.data_path, args.params)
 
-
-    if args.cmd == 'mult_M2_X':
-        mult_M2_X_dist(docs_file, params_file, args.data_path)
+    if args.cmd == 'compute_M1':
+        compute_M1(docs_file, params_file)
+    elif args.cmd == 'mult_M2_X':
+        mult_M2_X_dist(docs_file, params_file)
     elif args.cmd == 'whiten_M3':
-        whiten_M3_dist(docs_file, params_file, args.data_path)
+        whiten_M3_dist(docs_file, params_file)
 
 
 
