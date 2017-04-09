@@ -1,13 +1,16 @@
-import numpy as np
-import scipy.linalg 
+''' Compute Randomised SVD in distributed mode
+
+'''
 import os
 import subprocess
+import numpy as np
+import scipy.linalg
 from utils import sync_dir
 
 global dmlc_workers
 
 def rand_svd_dist(docs_file, params_file, q):
-    
+
     def launch_compute_M1_dist():
         cmd = '{} --launcher ssh'.format(os.environ['PS_LAUNCH'])
         cmd += ' -n {}'.format(os.environ['DMLC_NUM_WORKER'])
@@ -18,13 +21,13 @@ def rand_svd_dist(docs_file, params_file, q):
         cmd += ' --data-path {}'.format(os.environ['LDA_DATA_PATH'])
 
         subprocess.run([cmd])
-        sync_dir(os.environ['LDA_DATA_PATH'], dmlc_workers[0], 
+        sync_dir(os.environ['LDA_DATA_PATH'], dmlc_workers[0],
                  os.environ['LDA_DATA_PATH'])
 
         return np.load(params_file)['M1']
 
     def launch_mult_M2_X_dist(X):
-        np.savez(params_file, X=X, M1=M1, alpha0=alpha0, k=k)    
+        np.savez(params_file, X=X, M1=M1, alpha0=alpha0, k=k)
 
         cmd = '{} --launcher ssh'.format(os.environ['PS_LAUNCH'])
         cmd += ' -n {}'.format(os.environ['DMLC_NUM_WORKER'])
@@ -35,9 +38,9 @@ def rand_svd_dist(docs_file, params_file, q):
         cmd += ' --data-path {}'.format(os.environ['LDA_DATA_PATH'])
 
         subprocess.run([cmd])
-        sync_dir(os.environ['LDA_DATA_PATH'], dmlc_workers[0], 
+        sync_dir(os.environ['LDA_DATA_PATH'], dmlc_workers[0],
                  os.environ['LDA_DATA_PATH'])
-        
+
         return np.load(params_file)['prod_M2_X']
 
     docs_file_data = np.load(docs_file)
@@ -49,7 +52,7 @@ def rand_svd_dist(docs_file, params_file, q):
 
     alpha0 = params_file_data['alpha0']
     k = params_file_data['k']
-    
+
     M1 = compute_M1_dist()
 
     # Krylov method
@@ -63,6 +66,3 @@ def rand_svd_dist(docs_file, params_file, q):
     U, s, _ = scipy.linalg.svd(Y.T.dot(Y))
 
     return Q.dot(U), np.sqrt(s)
-    
-
-

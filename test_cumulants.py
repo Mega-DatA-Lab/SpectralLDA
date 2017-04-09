@@ -1,3 +1,6 @@
+''' Test cumulants computations in local mode
+
+'''
 import numpy as np
 import scipy.sparse
 import scipy.stats

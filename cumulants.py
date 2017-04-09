@@ -1,22 +1,18 @@
+''' Cumulants computations in local mode
+
+'''
+
 import numpy as np
 import scipy.sparse as spsp
 
-
 def mult_E2_X(docs, X, n_docs):
-    '''Compute the product of E[x1\odot x2] and X
-
-    The contribution of each document in ``docs`` is
-
-    .. math::
-
-        \frac{1}{n_docs}\left\{\sum_{i=1}^m\frac{1}{l_i(l_i-1)}\left(p_i\odot p_i-\text{diag}(p_i)\right)\right\},
-
-    where :math:`l_i` and :math:`p_i` are the length and the word count vector of the :math:`i`-th document in ``docs``.
+    ''' Compute the product of E2 and test matrix X
 
     Parameters
     -----------
     docs : m-by-V csr_matrix
-        m word count vectors, where V is the vocabulary size, m could be smaller than the total number of documents
+        m word count vectors, where V is the vocabulary size,
+        m could be smaller than the total number of documents
     X : V-by-k array
         where k is the number of factors
     n_docs : integer
@@ -25,7 +21,7 @@ def mult_E2_X(docs, X, n_docs):
     Returns
     ----------
     out : V-by-k csr_matrix
-        Sum of the contributions of each document to :math:`E[x_1\odot x_2]`
+        Sum of the contributions of each document to E2
     '''
     l = np.squeeze(np.array(docs.sum(axis=1)))
     diag_l = spsp.diags(1.0 / l / (l - 1))
@@ -41,16 +37,21 @@ def mult_E2_X(docs, X, n_docs):
 def mult_M2_X_helper(prod_E2_X, X, M1, alpha0):
     ''' Compute the product of M2 by X
 
-
     '''
     prod_M1_X = alpha0 / (alpha0 + 1) * np.outer(M1, M1.dot(X))
     return prod_E2_X - prod_M1_X
 
 def mult_M2_X(docs, X, n_docs, M1, alpha0):
+    ''' Compute the product of M2 by test matrix X in local mode
+
+    '''
     prod_E2_X = mult_E2_X(docs, X, n_docs)
     return mult_M2_X_helper(prod_E2_X, X, M1, alpha0)
 
 def whiten_E3(docs, W, n_docs):
+    ''' Whiten the E3 by W
+
+    '''
     m, _ = docs.shape
     _, k = W.shape
 
@@ -90,6 +91,9 @@ def whiten_E3(docs, W, n_docs):
     return whitened_E3
 
 def whiten_E2_M1(docs, W, n_docs, M1):
+    ''' Whiten the tensor products of E2 and M1 by W
+
+    '''
     m, _ = docs.shape
     _, k = W.shape
 
@@ -134,10 +138,9 @@ def whiten_E2_M1(docs, W, n_docs, M1):
     return whitened_E2_M1
 
 def whiten_M3_helper(whitened_E3, whitened_E2_M1, W, M1, alpha0):
-    ''' Whiten M3
+    ''' Whiten M3 given whitened E3 and whitened tensor products of E2 and M1
 
     '''
-    vocab_size = len(M1)
     _, k = W.shape
     q = M1.dot(W)
     whitened_M1_3 = np.einsum('i,j,k->ijk', q, q, q).reshape((k, k * k))
@@ -151,8 +154,10 @@ def whiten_M3_helper(whitened_E3, whitened_E2_M1, W, M1, alpha0):
     return whitened_M3
 
 def whiten_M3(docs, W, n_docs, M1, alpha0):
+    ''' Whiten M3 in local mode
+
+    '''
     whitened_E3 = whiten_E3(docs, W, n_docs)
     whitened_E2_M1 = whiten_E2_M1(docs, W, n_docs, M1)
     return whiten_M3_helper(whitened_E3, whitened_E2_M1,
                             W, M1, alpha0)
-
