@@ -129,7 +129,7 @@ def contrib_prod_e2_x(docs, test_x, n_docs):
 
     return (prod_x - prod_x_adj) / n_docs
 
-def prod_m2_x(docs, test_x, alpha0, n_partitions=1):
+def prod_m2_x(docs, test_x, alpha0, docs_m1=None, n_partitions=1):
     ''' Compute the product of M2 by test matrix X over partitions of documents
 
     Compute over partitions of documents in local mode, mostly
@@ -143,6 +143,8 @@ def prod_m2_x(docs, test_x, alpha0, n_partitions=1):
         Test matrix where k is the number of factors.
     alpha0 : float
         Sum of the Dirichlet prior parameter.
+    docs_m1: length-vocab_size array, optional
+        M1 of the entire collection of word count vectors.
     n_partitions : int, optional
         Number of partitions, 1 by default.
 
@@ -161,13 +163,16 @@ def prod_m2_x(docs, test_x, alpha0, n_partitions=1):
     assert n_docs >= 1 and vocab_size >= 1
     assert n_partitions >= 1 and n_partitions <= n_docs
     assert vocab_size == _vocab_size and num_factors >= 1
+    if docs_m1 is not None:
+        assert docs_m1.ndim == 1 and vocab_size == len(docs_m1)
     assert alpha0 > 0
 
     contribs = [contrib_prod_e2_x(docs[start:end, :], test_x, n_docs)
                 for start, end in equal_partitions(n_docs, n_partitions)]
 
-    return reduce_and_adjust(contribs, moment1(docs, n_partitions),
-                             test_x, alpha0)
+    if docs_m1 is None:
+        docs_m1 = moment1(docs, n_partitions)
+    return reduce_and_adjust(contribs, docs_m1, test_x, alpha0)
 
 
 # ============== M3 calculation ================
@@ -322,7 +327,7 @@ def contrib_whiten_e2m1(docs, docs_m1, whn, n_docs):
     whitened_e2_m1 = (whitened - whitened_adj) / n_docs
     return whitened_e2_m1.reshape((num_factors, -1))
 
-def whiten_m3(docs, whn, alpha0, n_partitions=1):
+def whiten_m3(docs, whn, alpha0, docs_m1=None, n_partitions=1):
     ''' Whiten M3
 
     Compute over partition of documents in local mode, mostly used
@@ -336,6 +341,8 @@ def whiten_m3(docs, whn, alpha0, n_partitions=1):
         Whitening matrix.
     alpha0 : float
         Sum of Dirichlet prior parameter.
+    docs_m1 : length-vocab_size array, optional
+        M1 of the entire collection of word count vectors.
     n_partitions : int, optional
         Number of partitions, 1 by default.
 
@@ -363,12 +370,15 @@ def whiten_m3(docs, whn, alpha0, n_partitions=1):
     assert n_docs >= 1 and vocab_size >= 1
     assert n_partitions <= n_docs
     assert vocab_size == _vocab_size and num_factors >= 1
+    if docs_m1 is not None:
+        assert docs_m1.ndim == 1 and vocab_size == len(docs_m1)
     assert alpha0 > 0
 
     contribs_e3 = [contrib_whiten_e3(docs[start:end, :], whn, n_docs)
                    for start, end in equal_partitions(n_docs, n_partitions)]
 
-    docs_m1 = moment1(docs, n_partitions)
+    if docs_m1 is None:
+        docs_m1 = moment1(docs, n_partitions)
     contribs_e2m1 = [contrib_whiten_e2m1(docs[start:end, :], docs_m1,
                                          whn, n_docs)
                      for start, end in equal_partitions(n_docs, n_partitions)]
