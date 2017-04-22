@@ -1,15 +1,75 @@
-''' Compute Randomised SVD in distributed mode
+''' Randomised SVD
 
 '''
 import os
 import subprocess
 import numpy as np
 import scipy.linalg
+from cumulants import moment1, prod_m2_x
 from utils import sync_dir
 
-global dmlc_workers
+def rand_svd(docs, alpha0, k, docs_m1=None, n_iter=5, n_partitions=1):
+    ''' Randomised SVD in local mode
+
+    PARAMETERS
+    -----------
+    docs : n_docs-by-vocab_size array or csr_matrix
+        Entire collection of word count vectors.
+    alpha0 : float
+        Sum of Dirichlet prior parameter.
+    k : int
+        Rank for the truncated SVD, >= 1.
+    docs_m1: length-vocab_size array, optional
+        M1 of the entire collection of word count vectors.
+    n_iter: int, optional
+        Number of iterations for the Krylov method, >= 0, 5 by default.
+    n_partitions: int, optional
+        Number of partitions, >= 1, 1 by default.
+
+    RETURNS
+    -----------
+    eigval : length-k array
+        Top k eigenvalues of M2.
+    eigvec : vocab_size-by-k array
+        Top k eigenvectors of M2.
+    '''
+    # pylint: disable=too-many-arguments
+    n_docs, vocab_size = docs.shape
+    assert n_docs >= 1 and vocab_size >= 1
+    if docs_m1 is not None:
+        assert docs_m1.ndim == 1 and vocab_size == len(docs_m1)
+    assert alpha0 > 0
+    assert k >= 1
+    assert n_iter >= 0
+    assert n_partitions >= 1
+
+    # Augment slightly k for better convergence
+    k_aug = np.min([k + 4, vocab_size, 2 * k])
+
+    # Gaussian test matrix
+    test_x = np.random.randn(vocab_size, k_aug)
+
+    # Krylov method
+    if docs_m1 is None:
+        docs_m1 = moment1(docs, n_partitions=n_partitions)
+    for _ in range(2 * n_iter + 1):
+        prod_test = prod_m2_x(docs, test_x, alpha0,
+                              docs_m1=docs_m1, n_partitions=n_partitions)
+        test_x, _ = scipy.linalg.qr(prod_test, mode='economic')
+        test_x = test_x[:, :k_aug]
+
+    # X^T M2 M2 X = Q S Q^T
+    # If M2 M2 = X Q S Q^T X^T, then the above holds,
+    # where X is an orthonormal test matrix.
+    prod_test = prod_m2_x(docs, test_x, alpha0,
+                          n_partitions=n_partitions)
+    svd_q, svd_s, _ = scipy.linalg.svd(prod_test.T.dot(prod_test))
+
+    return test_x.dot(svd_q), np.sqrt(svd_s)
+
 
 def rand_svd_dist(docs_file, params_file, q):
+    # pylint: disable
 
     def launch_compute_M1_dist():
         cmd = '{} --launcher ssh'.format(os.environ['PS_LAUNCH'])
