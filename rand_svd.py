@@ -1,4 +1,4 @@
-''' Randomised SVD
+''' Randomised SVD for scaled M2
 
 '''
 import os
@@ -8,8 +8,10 @@ import scipy.linalg
 from cumulants import moment1, prod_m2_x
 from utils import sync_dir
 
-def rand_svd(docs, alpha0, k, docs_m1=None, n_iter=5, n_partitions=1):
+def rand_svd(docs, alpha0, k, docs_m1=None, n_iter=1, n_partitions=1):
     ''' Randomised SVD in local mode
+
+    Perform Randomised SVD on scaled M2.
 
     PARAMETERS
     -----------
@@ -22,16 +24,16 @@ def rand_svd(docs, alpha0, k, docs_m1=None, n_iter=5, n_partitions=1):
     docs_m1: length-vocab_size array, optional
         M1 of the entire collection of word count vectors.
     n_iter: int, optional
-        Number of iterations for the Krylov method, >= 0, 5 by default.
+        Number of iterations for the Krylov method, >= 0, 1 by default.
     n_partitions: int, optional
         Number of partitions, >= 1, 1 by default.
 
     RETURNS
     -----------
     eigval : length-k array
-        Top k eigenvalues of M2.
+        Top k eigenvalues of scaled M2.
     eigvec : vocab_size-by-k array
-        Top k eigenvectors of M2.
+        Top k eigenvectors of scaled M2.
     '''
     # pylint: disable=too-many-arguments
     n_docs, vocab_size = docs.shape
@@ -56,16 +58,16 @@ def rand_svd(docs, alpha0, k, docs_m1=None, n_iter=5, n_partitions=1):
         prod_test = prod_m2_x(docs, test_x, alpha0,
                               docs_m1=docs_m1, n_partitions=n_partitions)
         test_x, _ = scipy.linalg.qr(prod_test, mode='economic')
-        test_x = test_x[:, :k_aug]
 
     # X^T M2 M2 X = Q S Q^T
     # If M2 M2 = X Q S Q^T X^T, then the above holds,
     # where X is an orthonormal test matrix.
     prod_test = prod_m2_x(docs, test_x, alpha0,
                           n_partitions=n_partitions)
+    prod_test *= alpha0 * (alpha0 + 1)
     svd_q, svd_s, _ = scipy.linalg.svd(prod_test.T.dot(prod_test))
 
-    return test_x.dot(svd_q), np.sqrt(svd_s)
+    return np.sqrt(svd_s)[:k], test_x.dot(svd_q)[:, :k]
 
 
 def rand_svd_dist(docs_file, params_file, q):
