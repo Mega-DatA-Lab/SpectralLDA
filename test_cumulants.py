@@ -134,7 +134,8 @@ def test_random_product_m2_x():
     docs_m2 = compute_m2(word_count_vectors, alpha0, n_docs)
 
     test_x = np.random.randn(vocab_size, k)
-    m2x = prod_m2_x(word_count_vectors, test_x, alpha0)
+    m2x = prod_m2_x(word_count_vectors, test_x, alpha0,
+                    n_partitions=3)
 
     assert np.linalg.norm(docs_m2.dot(test_x) - m2x) <= 1e-6
 
@@ -159,7 +160,8 @@ def test_whiten_m3():
     docs_m3 = compute_m3(word_count_vectors, alpha0, n_docs)
 
     test_x = np.random.randn(vocab_size, k)
-    whitened_m3 = (whiten_m3(word_count_vectors, test_x, alpha0)
+    whitened_m3 = (whiten_m3(word_count_vectors, test_x, alpha0,
+                             n_partitions=3)
                    .reshape((k, k, k)))
 
     assert np.linalg.norm(contract_m3(docs_m3, test_x) - whitened_m3) <= 1e-6
