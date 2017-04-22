@@ -5,7 +5,7 @@ import scipy.linalg
 from rand_svd import rand_svd
 from test_cumulants import simulate_word_count_vectors
 
-def test_spectral_lda():
+def test_rand_svd():
     ''' Simple test cases '''
     # pylint: disable=too-many-locals
     gen_alpha = [10, 5, 2]
