@@ -4,6 +4,11 @@ Example:
 
     alpha, beta = spectral_lda(docs, alpha0, k)
 
+
+REFERENCE
+-----------
+    https://github.com/Mega-DatA-Lab/SpectralLDA-Spark/blob/master/report.pdf
+
 '''
 import numpy as np
 from rand_svd import rand_svd
@@ -37,12 +42,21 @@ def spectral_lda(docs, alpha0, k, n_partitions=1):
     '''
     # pylint: disable=too-many-locals
     def adj_beta(beta):
-        ''' Project beta onto l1-simplex '''
-        proj_beta = proj_l1_simplex(beta - beta.min(), 1.0)
-        proj_neg_beta = proj_l1_simplex(- beta - (- beta).min(), 1.0)
-        return (proj_beta if (np.linalg.norm(beta - proj_beta)
-                              < np.linalg.norm(- beta - proj_neg_beta))
-                else proj_neg_beta)
+        ''' Project beta onto l1-simplex
+
+        As the CP Decomposition could return a factor column
+        with the inverse sign, project both beta - min(beta) + eps,
+        (-beta) - min(-beta) + eps and retain the one with minimal
+        shift theta as computed by the Duchi algorithm.
+        '''
+        # We add 1 / len(beta) to both to make sure the shifts theta
+        # are necessarily positive
+        beta1 = beta - beta.min() + 1 / len(beta)
+        beta2 = (- beta) - (- beta).min() + 1 / len(beta)
+        proj_beta, theta1 = proj_l1_simplex(beta1, 1.0)
+        proj_neg_beta, theta2 = proj_l1_simplex(beta2, 1.0)
+
+        return proj_beta if theta1 < theta2 else proj_neg_beta
 
     n_docs, vocab_size = docs.shape
     assert n_docs >= 1 and vocab_size >= 1

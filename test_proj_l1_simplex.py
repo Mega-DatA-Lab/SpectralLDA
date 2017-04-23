@@ -17,5 +17,5 @@ def test_proj_l1_simplex():
                  [2.25, 5.25, 3.25, 7.25]]
 
     for l1_simplex_boundary, solution in zip(range(2, 20, 2), solutions):
-        assert np.allclose(solution,
-                           proj_l1_simplex(vec1, l1_simplex_boundary))
+        proj_vec, _ = proj_l1_simplex(vec1, l1_simplex_boundary)
+        assert np.allclose(solution, proj_vec)

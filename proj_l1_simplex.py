@@ -1,7 +1,16 @@
 ''' Projection onto the l1-Simplex
 
-Ref:
-    Duchi, John, Efficient Projections onto the l1-Ball for Learning in High Dimensions
+Project a given vector onto the l1-Simplex with minimal shift measured by the l2-norm.
+
+Example:
+
+    proj_vec, theta = proj_l1_simplex(vec, l1_simplex_boundary)
+
+
+REFERENCE
+----------
+
+    Duchi, John, Efficient Projections onto the l1-Ball for Learning in High Dimensions.
 
 '''
 
@@ -22,6 +31,8 @@ def proj_l1_simplex(vec, l1_simplex_boundary):
     -----------
     out : 1d array of the same shape as vec
         Projected vector.
+    theta : float
+        Shift as computed by the Duchi algorithm.
     '''
     assert vec.ndim == 1 and len(vec) >= 1
     assert l1_simplex_boundary > 0
@@ -33,4 +44,4 @@ def proj_l1_simplex(vec, l1_simplex_boundary):
 
     theta = (vec_sorted[:rho].sum() - l1_simplex_boundary) / rho
 
-    return np.maximum(vec - theta, 0)
+    return np.maximum(vec - theta, 0), theta
