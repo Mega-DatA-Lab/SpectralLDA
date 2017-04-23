@@ -39,7 +39,7 @@ def rand_svd(docs, alpha0, k, docs_m1=None, n_iter=1, n_partitions=1):
     n_docs, vocab_size = docs.shape
     assert n_docs >= 1 and vocab_size >= 1
     if docs_m1 is not None:
-        assert docs_m1.ndim == 1 and vocab_size == len(docs_m1)
+        assert docs_m1.ndim == 1 and vocab_size == docs_m1.shape[0]
     assert alpha0 > 0
     assert k >= 1
     assert n_iter >= 0

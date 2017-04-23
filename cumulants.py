@@ -60,11 +60,11 @@ def contrib_m1(docs, n_docs):
     assert n_docs >= partition_size
 
     # transposed normalised docs
-    _docs = docs.T / docs.sum(axis=1)
+    _docs = docs.T / np.squeeze(docs.sum(axis=1))
     _docs = _docs.T
 
     assert np.allclose(_docs.sum(axis=1), 1)
-    return _docs.mean(axis=0) * (len(docs) / n_docs)
+    return np.squeeze(np.array(_docs.mean(axis=0))) * (docs.shape[0] / n_docs)
 
 def moment1(docs, n_partitions=1):
     ''' Compute M1 over partitioned documents
