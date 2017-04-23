@@ -41,22 +41,22 @@ def spectral_lda(docs, alpha0, k, n_partitions=1):
         Fitted topic-word distribution for LDA.
     '''
     # pylint: disable=too-many-locals
-    def adj_beta(beta):
-        ''' Project beta onto l1-simplex
+    def factor_correct_sign(factors, eps=1e-6):
+        ''' Return unique factor matrix with correct signs '''
+        _, k = factors[0].shape
+        factor = np.zeros_like(factors[0])
 
-        As the CP Decomposition could return a factor column
-        with the inverse sign, project both beta - min(beta) + eps,
-        (-beta) - min(-beta) + eps and retain the one with minimal
-        shift theta as computed by the Duchi algorithm.
-        '''
-        # We add 1 / len(beta) to both to make sure the shifts theta
-        # are necessarily positive
-        beta1 = beta - beta.min() + 1 / len(beta)
-        beta2 = (- beta) - (- beta).min() + 1 / len(beta)
-        proj_beta, theta1 = proj_l1_simplex(beta1, 1.0)
-        proj_neg_beta, theta2 = proj_l1_simplex(beta2, 1.0)
+        for j in range(k):
+            if np.linalg.norm(factors[1][:, j] - factors[2][:, j]) < eps:
+                factor[:, j] = factors[0][:, j]
+            elif np.linalg.norm(factors[0][:, j] - factors[2][:, j]) < eps:
+                factor[:, j] = factors[1][:, j]
+            elif np.linalg.norm(factors[0][:, j] - factors[1][:, j]) < eps:
+                factor[:, j] = factors[2][:, j]
+            else:
+                raise RuntimeError('Invalid results from CPDecomp.')
 
-        return proj_beta if theta1 < theta2 else proj_neg_beta
+        return factor
 
     n_docs, vocab_size = docs.shape
     assert n_docs >= 1 and vocab_size >= 1
@@ -85,12 +85,16 @@ def spectral_lda(docs, alpha0, k, n_partitions=1):
     eigval = cp_results[0].asnumpy()
     factors = [mat.asnumpy().T for mat in cp_results[1:]]
 
+    # Unique factor matrix correcting signs of columns
+    # in all factor matrices
+    unique_factor = factor_correct_sign(factors)
+
     # Recompose alpha, beta
     alpha = 1 / eigval ** 2
     beta = (eigvec_m2.dot(np.diag(np.sqrt(eigval_m2)))
-            .dot(factors[0]).dot(np.diag(eigval)))
+            .dot(unique_factor).dot(np.diag(eigval)))
     for j in range(k):
-        beta[:, j] = adj_beta(beta[:, j])
+        beta[:, j] = proj_l1_simplex(beta[:, j], 1.0)
 
     # Return in descending order of alpha
     return alpha[::-1], beta[:, ::-1]

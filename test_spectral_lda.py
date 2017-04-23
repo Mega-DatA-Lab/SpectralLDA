@@ -15,7 +15,7 @@ def test_spectral_lda():
 
     gen_beta = np.random.rand(vocab_size, gen_k)
     for j in range(gen_k):
-        gen_beta[(j * 5):((j + 1) * 5), j] += 4
+        gen_beta[(j * 5):((j + 1) * 5), j] += 1
     gen_beta /= gen_beta.sum(axis=0)
 
     docs = simulate_word_count_vectors(gen_alpha, gen_beta, n_docs, 500, 1000)
@@ -48,7 +48,7 @@ def test_spectral_lda_csr_matrix():
 
     gen_beta = np.random.rand(vocab_size, gen_k)
     for j in range(gen_k):
-        gen_beta[(j * 5):((j + 1) * 5), j] += 4
+        gen_beta[(j * 5):((j + 1) * 5), j] += 1
     gen_beta /= gen_beta.sum(axis=0)
 
     docs = simulate_word_count_vectors(gen_alpha, gen_beta, n_docs, 500, 1000)
