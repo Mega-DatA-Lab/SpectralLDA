@@ -7,7 +7,7 @@ Example:
 
 REFERENCE
 -----------
-    https://github.com/Mega-DatA-Lab/SpectralLDA-Spark/blob/master/report.pdf
+    https://github.com/Mega-DatA-Lab/SpectralLDA-MXNet/blob/master/report.pdf
 
 '''
 import numpy as np
