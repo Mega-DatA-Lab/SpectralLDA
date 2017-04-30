@@ -43,7 +43,7 @@ def rand_svd(docs, alpha0, k, docs_m1=None, n_iter=1, n_partitions=1):
     assert n_partitions >= 1
 
     # Augment slightly k for better convergence
-    k_aug = np.min([k + 4, vocab_size, 2 * k])
+    k_aug = np.min([k + 5, vocab_size])
 
     # Gaussian test matrix
     test_x = np.random.randn(vocab_size, k_aug)
