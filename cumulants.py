@@ -1,14 +1,14 @@
 ''' Cumulants computations in local mode
 
-It computes M1, the product of M2 with a test matrix, and whitening
-of M3, over partitioned documents.
+The main functions are
 
-`contrib_xxx()` computes contribution of the current partition
-to the moment, the product of the moment with a test matrix, or
-whitened moment.
+    moment1()        Compute M1
+    prod_m2_x()      Compute the product of M2 by a test matrix
+    whiten_m3()      Whiten M3
 
-`xxx_adj()` computes the list of adjustment terms for the product
-of the moment with a test matrix, or whitened moment.
+`contrib_xxx()` are helper functions that compute contribution of
+the current partition to M1, the product of M2 with a test matrix,
+or whitened M3.
 '''
 from functools import reduce
 from operator import add
