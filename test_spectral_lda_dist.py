@@ -50,29 +50,46 @@ def test_spectral_lda_dist():
                                        500, 1000)
 
     # Save the documents as partitioned arrays
-    docs_path = '/tmp/test_lda'
+    docs_path = str(Path(os.environ['HOME']) / 'test_lda')
     num_segments = 100
     partition_size = 50
     psave(docs_path, arr_iterable(docs, num_segments), docs.shape,
-          partition_size=partition_size)
+          partition_size=partition_size, force=True)
+
+    # Rsync the documents to all hosts
+    for host in hosts:
+        run(['rsync', '-ar', docs_path,
+             '{}:{}'.format(host, docs_path)])
 
     # Prepare the cmd to call
+    spectral_lda_dist_file = (Path(__file__).resolve().parent /
+                              'spectral_lda_dist.py')
     k = gen_k
     alpha0 = np.sum(gen_alpha[:k])
-    output_prefix = '/tmp/test_lda_results'
+    output_prefix = str(Path(os.environ['HOME']) / 'test_lda_results')
 
     num_servers = 2
     num_workers = len(hosts) - num_servers
-    run(['python3', 'tools/launch.py', '-n', num_workers, '-s', num_servers,
-         '-H', os.environ['HOSTFILE'], '--sync-dst-dir', docs_path,
-         'python3', str(Path(__file__).resolve()),
+
+    print('docs_path: ', docs_path)
+    print('spectral_lda_dist_file: ', spectral_lda_dist_file)
+    print('output_prefix: ', output_prefix)
+
+    run(['python3', 'tools/launch.py',
+         '-n', str(num_workers), '-s', str(num_servers),
+         '-H', str(Path(os.environ['HOSTFILE']).resolve()), 
+         'python3', str(spectral_lda_dist_file),
          docs_path, '{:.6f}'.format(alpha0), str(k), output_prefix],
         cwd=os.environ['MXNET'])
 
     # Copy back the results
+    run(['rm', '-f', output_prefix + '_alpha.csv'])
+    run(['rm', '-f', output_prefix + '_beta.csv'])
     for host in hosts:
         run(['scp', '{}:{}_*.csv'.format(host, output_prefix),
              str(Path(output_prefix).parent)])
+        if Path(output_prefix + '_alpha.csv').exists():
+            break
 
     alpha = np.loadtxt(output_prefix + '_alpha.csv')
     beta = np.loadtxt(output_prefix + '_beta.csv')
