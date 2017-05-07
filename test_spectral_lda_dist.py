@@ -19,7 +19,7 @@ from test_cumulants import simulate_word_count_vectors
 def read_hostfile(hostfile):
     ''' Return hosts '''
     hosts = []
-    with open(hostfile) as fhost:
+    with open(str(hostfile)) as fhost:
         for line in fhost:
             if line.startswith('#'):
                 continue
@@ -31,7 +31,8 @@ def test_spectral_lda_dist():
     ''' Simple test cases '''
     assert 'MXNET' in os.environ, 'MXNET must be defined'
     assert 'HOSTFILE' in os.environ, 'HOSTFILE must be defined'
-    hosts = read_hostfile(os.environ['HOSTFILE'])
+    hostfile = Path(os.environ['HOSTFILE']).resolve()
+    hosts = read_hostfile(hostfile)
     assert len(hosts) >= 4, 'There must be at least 4 hosts'
 
     # Generative alpha
@@ -58,7 +59,7 @@ def test_spectral_lda_dist():
 
     # Rsync the documents to all hosts
     for host in hosts:
-        run(['rsync', '-ar', docs_path,
+        run(['rsync', '-a', docs_path + '/',
              '{}:{}'.format(host, docs_path)])
 
     # Prepare the cmd to call
@@ -71,13 +72,14 @@ def test_spectral_lda_dist():
     num_servers = 2
     num_workers = len(hosts) - num_servers
 
+    print('hostfile: ', hostfile)
     print('docs_path: ', docs_path)
     print('spectral_lda_dist_file: ', spectral_lda_dist_file)
     print('output_prefix: ', output_prefix)
 
     run(['python3', 'tools/launch.py',
          '-n', str(num_workers), '-s', str(num_servers),
-         '-H', str(Path(os.environ['HOSTFILE']).resolve()), 
+         '-H', str(hostfile),
          'python3', str(spectral_lda_dist_file),
          docs_path, '{:.6f}'.format(alpha0), str(k), output_prefix],
         cwd=os.environ['MXNET'])
