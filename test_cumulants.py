@@ -6,7 +6,7 @@ from operator import add
 import numpy as np
 import scipy.sparse
 import scipy.stats
-from cumulants import moment1, prod_m2_x, whiten_m3
+from cumulants import prod_m2_x, whiten_m3
 
 def simulate_word_count_vectors(alpha, beta, n_docs,
                                 min_total_word_count, max_total_word_count):
@@ -140,12 +140,6 @@ def test_random_product_m2_x():
 
         assert np.linalg.norm(docs_m2.dot(test_x) - m2x) <= 1e-6
 
-        docs_m1 = moment1(word_count_vectors, n_partitions=3)
-        m2x = prod_m2_x(word_count_vectors, test_x, alpha0,
-                        docs_m1=docs_m1, n_partitions=n_partitions)
-
-        assert np.linalg.norm(docs_m2.dot(test_x) - m2x) <= 1e-6
-
 def test_whiten_m3():
     ''' Test whitening M3 by random test matrix X '''
     k = 5
@@ -170,13 +164,6 @@ def test_whiten_m3():
         test_x = np.random.randn(vocab_size, k)
         whitened_m3 = whiten_m3(word_count_vectors, test_x, alpha0,
                                 n_partitions=n_partitions)
-
-        diff = contract_m3(docs_m3, test_x) - whitened_m3.reshape((k, k, k))
-        assert np.linalg.norm(diff) <= 1e-6
-
-        docs_m1 = moment1(word_count_vectors, n_partitions=3)
-        whitened_m3 = whiten_m3(word_count_vectors, test_x, alpha0,
-                                docs_m1=docs_m1, n_partitions=n_partitions)
 
         diff = contract_m3(docs_m3, test_x) - whitened_m3.reshape((k, k, k))
         assert np.linalg.norm(diff) <= 1e-6
