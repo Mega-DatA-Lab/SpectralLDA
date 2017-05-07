@@ -10,6 +10,8 @@ REFERENCE
     https://github.com/Mega-DatA-Lab/SpectralLDA-MXNet/blob/master/report.pdf
 
 '''
+from argparse import ArgumentParser
+from pathlib import Path
 import numpy as np
 from partitioned_data import pmeta
 from rand_svd_dist import rand_svd_dist
@@ -18,7 +20,7 @@ import mxnet as mx
 from proj_l1_simplex import proj_l1_simplex
 
 
-def spectral_lda_dist(docs, alpha0, k):
+def spectral_lda_dist(docs, alpha0, k, output_prefix):
     ''' Spectral LDA in distributed mode
 
     Perform Spectral LDA based on tensor CP Decomposition.
@@ -31,6 +33,8 @@ def spectral_lda_dist(docs, alpha0, k):
         Sum of Dirichlet prior parameter.
     k : int
         Rank for the truncated SVD, >= 1.
+    output_prefix : str
+        Prefix of output files to save alpha and beta. Not a directory.
 
     RETURNS
     -----------
@@ -61,6 +65,8 @@ def spectral_lda_dist(docs, alpha0, k):
     assert n_docs >= 1 and vocab_size >= 1
     assert alpha0 > 0
     assert k >= 1
+    assert not Path(output_prefix).is_dir(), ('output_prefix cannot be'
+                                              ' a directory')
 
     # Whiten scaled M3 with SVD of scaled M2
     docs_m1 = moment1_dist(docs)
@@ -93,4 +99,25 @@ def spectral_lda_dist(docs, alpha0, k):
         beta[:, j] = proj_l1_simplex(beta[:, j], 1.0)
 
     # Return in descending order of alpha
+    np.savetxt(output_prefix + '_alpha.csv', alpha[::-1])
+    np.savetxt(output_prefix + '_beta.csv', beta[:, ::-1])
     return alpha[::-1], beta[:, ::-1]
+
+def main():
+    ''' Parse command line and call spectral_lda_dist() '''
+    parser = ArgumentParser(description='Spectral LDA')
+    parser.add_argument('docs', type=str,
+                        help='Path to documents, stored in partitions.')
+    parser.add_argument('alpha0', type=float,
+                        help='Sum of Dirichlet prior parameter.')
+    parser.add_argument('k', type=int,
+                        help='Number of topics to extract.')
+    parser.add_argument('prefix', type=str,
+                        help=('Prefix of output files to save fitted'
+                              ' alpha and beta. Cannot be a directory.'))
+
+    args = parser.parse_args()
+    spectral_lda_dist(args.docs, args.alpha0, args.k, args.prefix)
+
+if __name__ == '__main__':
+    main()
