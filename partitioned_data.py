@@ -127,7 +127,7 @@ def psave(fname, arr, shape, partition_size, force=False):
         raise RuntimeError('%s non-empty', path)
 
     # Make path
-    subprocess.run(['rm', '-rf', path])
+    subprocess.run(['rm', '-rf', str(path)])
     path.mkdir()
 
     # Write .meta
