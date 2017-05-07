@@ -40,7 +40,7 @@ def test_partitioned_data():
         start, end = sorted(sample(range(height + 1), 2))
         assert np.allclose(arr[start:end, :], pload(fname, start, end))
 
-    run(['rm -rf ' + fname], shell=True)
+    run(['rm', '-rf', fname])
 
 def test_partitioned_data_sparse():
     ''' Simple test cases '''
@@ -67,4 +67,4 @@ def test_partitioned_data_sparse():
         start, end = sorted(sample(range(height + 1), 2))
         assert (arr[start:end, :] != pload(fname, start, end)).nnz == 0
 
-    run(['rm -rf ' + fname], shell=True)
+    run(['rm', '-rf', fname])
