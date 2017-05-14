@@ -19,8 +19,8 @@ def dump_bow(corpus, partition_size=50, limit=200, output_prefix='dump'):
     partition_size: int
         Number of documents in each .txt.gz dump file.
     limit: int or None
-        The total number of documents to dump, or all the documents
-        when it is None.
+        The total number of documents to dump, or None for all
+        the documents in the corpus.
     output_prefix: str
         Prefix of the dump files.
     '''
@@ -30,12 +30,15 @@ def dump_bow(corpus, partition_size=50, limit=200, output_prefix='dump'):
         with gzip.open(fname, 'wt') as partition_file:
             partition_file.write(buf)
 
-    if limit is None:
-        limit = len(corpus)
+    if limit is not None:
+        print('Processing {} documents in the corpus...'.format(limit))
+    else:
+        print('Processing all the documents in the corpus...')
 
-    assert partition_size >= 1 and limit >= 1
+    assert partition_size >= 1
+    assert limit is None or limit >= 1
     # gensim 2.0 requires this otherwise the multi-processing locks up
-    assert partition_size <= limit
+    assert limit is None or partition_size <= limit
 
     count_documents = 0
     partition_id = 0
@@ -47,18 +50,19 @@ def dump_bow(corpus, partition_size=50, limit=200, output_prefix='dump'):
         count_documents += 1
 
         if count_documents % 200 == 0:
-            print('Processes {} documents.'.format(count_documents))
+            print('Processed {} documents.'.format(count_documents))
 
         if count_documents % partition_size == 0:
             write_buffer(buf, output_prefix, partition_id)
             buf = ''
             partition_id += 1
 
-        if count_documents >= limit:
+        if limit is not None and count_documents >= limit:
             break
 
     if buf:
         write_buffer(buf, output_prefix, partition_id)
+    print('Dumped {} documents.'.format(count_documents))
 
 def main():
     ''' Parse arguments and run '''
@@ -71,12 +75,11 @@ def main():
 
     parser.add_argument('-j', '--jobs', type=int, default=2,
                         help='Number of parallel jobs, default: 2')
-    parser.add_argument('-p', '--partition-size', type=int, default=50,
-                        help=('Number of documents in each .txt.gz file, '
-                              'default: 50'))
-    parser.add_argument('-l', '--limit', type=int, default=200,
+    parser.add_argument('-p', '--partition-size', type=int,
+                        help='Number of documents in each .txt.gz file')
+    parser.add_argument('-l', '--limit', type=int,
                         help=('Total number of documents to dump, '
-                              'or -1 for all documents, default: 200'))
+                              'or all documents when not specified'))
     parser.add_argument('-o', '--output-prefix', type=str, default='dump',
                         help='Prefix of dump .txt.gz files, default: dump')
 
@@ -86,14 +89,8 @@ def main():
     wiki = WikiCorpus(args.wikidump, processes=args.jobs,
                       dictionary=wiki_dictionary)
 
-    if args.limit == -1:
-        dump_bow(wiki, args.partition_size, None,
-                 output_prefix=args.output_prefix)
-        print('Dumped {} documents.'.format(len(wiki)))
-    else:
-        dump_bow(wiki, args.partition_size, args.limit,
-                 output_prefix=args.output_prefix)
-        print('Dumped {} documents.'.format(args.limit))
+    dump_bow(wiki, args.partition_size, args.limit,
+             output_prefix=args.output_prefix)
 
 if __name__ == '__main__':
     main()
