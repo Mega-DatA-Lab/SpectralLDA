@@ -1,5 +1,8 @@
 ''' Dump Bag-of-Word from gensim WikiCorpus '''
 import gzip
+from argparse import ArgumentParser
+from gensim.corpora.dictionary import Dictionary
+from gensim.corpora.wikicorpus import WikiCorpus
 
 def dump_bow(corpus, partition_size=10000, limit=200, output_prefix='dump'):
     ''' Dump Bag-of-Word from gensim WikiCorpus
@@ -41,7 +44,45 @@ def dump_bow(corpus, partition_size=10000, limit=200, output_prefix='dump'):
             partition_id += 1
 
         if limit is not None and count_documents >= limit:
-            return
+            break
 
     if buf:
         write_buffer(buf, output_prefix, partition_id)
+
+def main():
+    ''' Parse arguments and run '''
+    parser = ArgumentParser(description='Dump bag-of-words in .txt.gz files')
+
+    parser.add_argument('wikidump', type=str,
+                        help='xxx-pages-articles.xml.bz2 wiki dump file')
+    parser.add_argument('dictionary', type=str,
+                        help='gensim dictionary .txt file')
+
+    parser.add_argument('-j', '--jobs', type=int, default=2,
+                        help='Number of parallel jobs, default: 2')
+    parser.add_argument('-p', '--partition-size', type=int, default=50,
+                        help=('Number of documents in each .txt.gz file, '
+                              'default: 50'))
+    parser.add_argument('-l', '--limit', type=int, default=200,
+                        help=('Total number of documents to dump, '
+                              '-1 for no limit, default: 200'))
+    parser.add_argument('-o', '--output-prefix', type=str, default='dump',
+                        help='Prefix of dump .txt.gz files, default: dump')
+
+    args = parser.parse_args()
+
+    wiki_dictionary = Dictionary.load_from_text(args.dictionary)
+    wiki = WikiCorpus(args.wikidump, processes=args.jobs,
+                      dictionary=wiki_dictionary)
+
+    if args.limit == -1:
+        dump_bow(wiki, args.partition_size,
+                 output_prefix=args.output_prefix)
+        print('Dumped {} documents.'.format(len(wiki)))
+    else:
+        dump_bow(wiki, args.partition_size, args.limit,
+                 output_prefix=args.output_prefix)
+        print('Dumped {} documents.'.format(args.limit))
+
+if __name__ == '__main__':
+    main()
