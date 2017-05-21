@@ -52,15 +52,16 @@ def rand_svd_dist(docs, alpha0, k, docs_m1=None, n_iter=1, seed=134721):
     # Krylov method
     if docs_m1 is None:
         docs_m1 = moment1_dist(docs)
-    for _ in range(2 * n_iter + 1):
+    for i in range(2 * n_iter + 1):
         prod_test = prod_m2_x_dist(docs, test_x, alpha0,
-                                   docs_m1=docs_m1)
+                                   docs_m1=docs_m1, key_offset=i)
         test_x, _ = scipy.linalg.qr(prod_test, mode='economic')
 
     # X^T M2 M2 X = Q S Q^T
     # If M2 M2 = X Q S Q^T X^T, then the above holds,
     # where X is an orthonormal test matrix.
-    prod_test = prod_m2_x_dist(docs, test_x, alpha0)
+    prod_test = prod_m2_x_dist(docs, test_x, alpha0,
+                               docs_m1=docs_m1, key_offset=2 * n_iter + 1)
     prod_test *= alpha0 * (alpha0 + 1)
     svd_q, svd_s, _ = scipy.linalg.svd(prod_test.T.dot(prod_test))
 

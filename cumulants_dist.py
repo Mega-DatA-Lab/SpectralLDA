@@ -9,10 +9,10 @@ import mxnet as mx
 from partitioned_data import pmeta, pload
 
 KVSTORE = mx.kvstore.create('dist')
-KEY_M1 = 100
-KEY_PROD_E2X = 110
-KEY_WHITENED_E3 = 120
-KEY_WHITENED_E2M1 = 130
+KEY_M1 = 1000
+KEY_PROD_E2X = 1100
+KEY_WHITENED_E3 = 1200
+KEY_WHITENED_E2M1 = 1300
 
 
 def nth(iterable, n, default=None):
@@ -47,7 +47,7 @@ def moment1_dist(docs):
     KVSTORE.pull(KEY_M1, out=m1_mx)
     return m1_mx.asnumpy()
 
-def prod_m2_x_dist(docs, test_x, alpha0, docs_m1=None):
+def prod_m2_x_dist(docs, test_x, alpha0, docs_m1=None, key_offset=None):
     ''' Compute the product of M2 by test matrix X in distributed mode
 
     Parameters
@@ -60,6 +60,8 @@ def prod_m2_x_dist(docs, test_x, alpha0, docs_m1=None):
         Sum of the Dirichlet prior parameter.
     docs_m1: length-vocab_size array, optional
         M1 of the entire collection of word count vectors.
+    key_offset: int
+        Offset of the current key relative to KEY_PROD_M2X.
 
     Returns
     -----------
@@ -78,6 +80,7 @@ def prod_m2_x_dist(docs, test_x, alpha0, docs_m1=None):
     if docs_m1 is not None:
         assert docs_m1.ndim == 1 and vocab_size == len(docs_m1)
     assert alpha0 > 0
+    assert key_offset >= 0 and key_offset < 100
 
     # Compute M1 if not provided
     if docs_m1 is None:
@@ -85,16 +88,16 @@ def prod_m2_x_dist(docs, test_x, alpha0, docs_m1=None):
 
     # Init KVStore
     prod_e2x_mx = mx.nd.zeros((vocab_size, num_factors))
-    KVSTORE.init(KEY_PROD_E2X, prod_e2x_mx)
+    KVSTORE.init(KEY_PROD_E2X + key_offset, prod_e2x_mx)
 
     # Push current contribution to product of E2 and X
     start, end = nth(equal_partitions(n_docs, KVSTORE.num_workers),
                      KVSTORE.rank)
     contrib = contrib_prod_e2_x(pload(docs, start, end), test_x, n_docs)
-    KVSTORE.push(KEY_PROD_E2X, mx.nd.array(contrib))
+    KVSTORE.push(KEY_PROD_E2X + key_offset, mx.nd.array(contrib))
 
     # Reduce and pull the product of E2 and X
-    KVSTORE.pull(KEY_PROD_E2X, out=prod_e2x_mx)
+    KVSTORE.pull(KEY_PROD_E2X + key_offset, out=prod_e2x_mx)
 
     return adjust(prod_e2x_mx.asnumpy(), docs_m1, test_x, alpha0)
 
