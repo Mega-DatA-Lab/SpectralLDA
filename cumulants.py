@@ -59,6 +59,8 @@ def contrib_m1(docs, n_docs):
     assert partition_size >= 1 and vocab_size >= 1
     assert n_docs >= partition_size
 
+    docs = docs[np.squeeze(np.array(docs.sum(axis=1))) >= 3]
+
     # transposed normalised docs
     _docs = docs.T / np.squeeze(docs.sum(axis=1))
     _docs = _docs.T
@@ -117,6 +119,8 @@ def contrib_prod_e2_x(docs, test_x, n_docs):
     assert partition_size >= 1 and vocab_size >= 1
     assert partition_size <= n_docs
     assert vocab_size == _vocab_size and num_factors >= 1
+
+    docs = docs[np.squeeze(np.array(docs.sum(axis=1))) >= 3]
 
     document_lengths = np.squeeze(np.array(docs.sum(axis=1)))
     diag_l = spsp.diags(1.0 / document_lengths / (document_lengths - 1))
@@ -200,6 +204,8 @@ def contrib_whiten_e3(docs, whn, n_docs):
     assert vocab_size == _vocab_size and num_factors >= 1
     assert partition_size <= n_docs
 
+    docs = docs[np.squeeze(np.array(docs.sum(axis=1))) >= 3]
+
     # m-by-k
     whitened_docs = docs.dot(whn)
 
@@ -274,6 +280,8 @@ def contrib_whiten_e2m1(docs, docs_m1, whn, n_docs):
     assert partition_size >= 1 and vocab_size >= 1
     assert n_docs >= partition_size
     assert vocab_size == _vocab_size and num_factors >= 1
+
+    docs = docs[np.squeeze(np.array(docs.sum(axis=1))) >= 3]
 
     # m-by-k
     whitened_docs = docs.dot(whn)
