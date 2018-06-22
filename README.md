@@ -1,4 +1,7 @@
 # SpectralLDA
+
+**Note: This is the single-host version, for the up-to-date and distributed version please refer to (../../SpectralLDA-Spark).**
+
 This code implements a Spectral (third order tensor decomposition) learning method for the Latent Dirichlet Allocation model in Python.
 
 The Spectral learning method works with empirical counts of word pair or word triplet from any document in the dataset. We average the counts and put them in tensors. We then perform tensor decomposition to learn the Latent Dirichlet Allocation model. For more details, please refer to `report.pdf` in the repository.
