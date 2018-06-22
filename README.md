@@ -1,6 +1,6 @@
 # SpectralLDA
 
-**Note: This is the single-host version, for the up-to-date and distributed version please refer to (../../SpectralLDA-Spark).**
+**Note: This is the single-host version, for the up-to-date and distributed version please refer to [https://github.com/Mega-DatA-Lab/SpectralLDA-Spark].**
 
 This code implements a Spectral (third order tensor decomposition) learning method for the Latent Dirichlet Allocation model in Python.
 
